@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up — BloodConnect</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="auth-page">
+<div class="auth-container" style="max-width:520px;">
+
+  <!-- Step 1: Registration -->
+  <div id="step-signup">
+    <div class="auth-logo">
+      <span>🩸</span>
+      <h1>Join BloodConnect</h1>
+      <p>Create your account and start saving lives</p>
+    </div>
+
+    <div id="signup-alert"></div>
+
+    <form id="signup-form" autocomplete="off">
+
+      <!-- ── Dual Role Selector ─────────────────────────────────── -->
+      <div class="form-group">
+        <label>I want to register as <span class="req">*</span></label>
+        <div class="role-selector">
+          <label>
+            <input type="radio" name="roleChoice" class="role-option" value="donor" checked/>
+            <span class="role-label"><span class="role-icon">🩸</span>Donor</span>
+          </label>
+          <label>
+            <input type="radio" name="roleChoice" class="role-option" value="receiver"/>
+            <span class="role-label"><span class="role-icon">🆘</span>Receiver</span>
+          </label>
+          <label>
+            <input type="radio" name="roleChoice" class="role-option" value="both"/>
+            <span class="role-label"><span class="role-icon">🔄</span>Both</span>
+          </label>
+        </div>
+        <small class="text-muted">Select "Both" if you want to donate AND request blood.</small>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="name" class="form-control" placeholder="Ali Ahmed" required/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" class="form-control" placeholder="+92 300 1234567"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email Address <span class="req">*</span></label>
+        <input type="email" id="email" class="form-control" placeholder="you@example.com" required/>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Password <span class="req">*</span></label>
+          <input type="password" id="password" class="form-control" placeholder="Min 6 characters" required/>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password <span class="req">*</span></label>
+          <input type="password" id="confirm-password" class="form-control" placeholder="Repeat password" required/>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Blood Group <span class="req">*</span></label>
+          <select id="blood_group" class="form-control" required>
+            <option value="">Select...</option>
+            <option>A+</option><option>A-</option>
+            <option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option>
+            <option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>City <span class="req">*</span></label>
+          <input type="text" id="city" class="form-control" placeholder="Karachi" required/>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="age" class="form-control" placeholder="25" min="1" max="100"/>
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input type="number" id="weight" class="form-control" placeholder="65" min="1" max="300"/>
+        </div>
+      </div>
+
+      <button type="submit" id="signup-btn" class="btn btn-primary btn-block btn-lg">Create Account →</button>
+    </form>
+
+    <div class="auth-footer">Already have an account? <a href="login.html">Sign in</a></div>
+    <div class="auth-footer" style="margin-top:6px;"><a href="index.html">← Back to Home</a></div>
+  </div>
+
+  <!-- Step 2: OTP Verification -->
+  <div id="step-otp" style="display:none;">
+    <div class="auth-logo">
+      <span>📧</span>
+      <h1>Verify Your Email</h1>
+      <p id="otp-email-hint">We sent a 6-digit code to your email</p>
+    </div>
+
+    <div id="otp-alert"></div>
+    <div class="alert alert-info">📬 Check your inbox and spam. The OTP is valid for <strong>10 minutes</strong>.</div>
+
+    <div class="form-group">
+      <label>6-Digit OTP Code</label>
+      <input type="text" id="otp-input" class="form-control" placeholder="123456" maxlength="6"
+             style="font-size:1.8rem;text-align:center;letter-spacing:.5rem;font-weight:700;"/>
+    </div>
+
+    <button id="verify-btn" class="btn btn-primary btn-block btn-lg">✅ Verify Email</button>
+    <button id="resend-btn" class="btn btn-secondary btn-block mt-1">🔄 Resend OTP</button>
+    <div class="auth-footer mt-2"><a href="signup.html">← Back to signup</a></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

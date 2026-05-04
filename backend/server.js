@@ -27,6 +27,10 @@ app.get('/api/health', (req, res) =>
   res.json({ status: 'OK', message: '🩸 BloodConnect API is running', timestamp: new Date() })
 );
 
+app.get('/api/config/maps-key', (req, res) => {
+  res.json({ key: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
@@ -41,5 +45,7 @@ app.listen(PORT, () => {
   console.log(`📡 API:    http://localhost:${PORT}/api`);
   console.log(`🌍 Env:    ${process.env.NODE_ENV || 'development'}\n`);
 });
+
+
 
 module.exports = app;

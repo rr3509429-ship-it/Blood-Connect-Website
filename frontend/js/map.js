@@ -141,7 +141,7 @@ window.addRequestMarkersToMap = function (requests) {
 // ── Share location ─────────────────────────────────────────────────────────────
 window.shareLocation = async function () {
   // Determine which map container to use
-  const containerId = document.getElementById('map-container-r') ? 'map-container-r' : 'map-container';
+  const containerId = document.getElementById('map-container-r')?.offsetParent !== null ? 'map-container-r' : 'map-container';
   const statusElId  = containerId === 'map-container-r' ? 'location-status-r' : 'location-status';
   const btnId       = containerId === 'map-container-r' ? 'share-location-btn-r' : 'share-location-btn';
 
@@ -175,10 +175,12 @@ window.shareLocation = async function () {
       // was on the script tag — the library hadn't loaded yet when this code ran.
       const mapWrap = document.getElementById(containerId);
       if (mapWrap) {
-        mapWrap.innerHTML = `<div id="google-map-canvas" style="width:100%;height:440px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md);"></div>`;
-
+          mapWrap.style.cssText = 'width:100%;min-height:440px;display:block;';
+          mapWrap.innerHTML = `<div id="google-map-canvas" style="width:100%;height:440px;min-height:440px;display:block;position:relative;"></div>`;
         whenMapsReady(async function() {
+          console.log('whenMapsReady fired!');  // 👈 add this
           const loaded = initGoogleMap('google-map-canvas', lat, lng);
+          console.log('initGoogleMap result:', loaded);  // 👈 and this
           if (loaded) {
             try {
               const session = getSession();

@@ -20,51 +20,50 @@
   called before the Maps library finished loading. The script now loads
   synchronously (or use `loading=async` with callback below).
   -->
-  <script>
-    // FIX: Detect missing API key early and show a user-friendly warning
-    // instead of a silent blank map. Replace the string below with your real key.
-    window.GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY';
+ <script>
+  window._mapsApiReady = false;
+  window._mapsReadyCallbacks = [];
 
-    window._mapsApiReady = false;
+  window.onGoogleMapsReady = function () {
+    window._mapsApiReady = true;
+    window._mapsReadyCallbacks.forEach(fn => fn());
     window._mapsReadyCallbacks = [];
+  };
 
-    // Called automatically by the Maps script once loaded
-    window.onGoogleMapsReady = function() {
-      window._mapsApiReady = true;
-      window._mapsReadyCallbacks.forEach(fn => fn());
-      window._mapsReadyCallbacks = [];
-    };
+  window.whenMapsReady = function (fn) {
+    if (window._mapsApiReady) fn();
+    else window._mapsReadyCallbacks.push(fn);
+  };
 
-    // Helper — run fn when Maps is ready (or immediately if already loaded)
-    window.whenMapsReady = function(fn) {
-      if (window._mapsApiReady) { fn(); }
-      else { window._mapsReadyCallbacks.push(fn); }
-    };
-
-    // FIX: Show friendly warning in map containers if API key is not set
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') {
-        ['map-container', 'map-container-r'].forEach(function(id) {
+ 
+  fetch('/api/config/maps-key')
+    .then(r => r.json())
+    .then(({ key }) => {
+      console.log('Maps key received:', key);
+      if (!key || key === 'YOUR_GOOGLE_MAPS_API_KEY') {
+        // Show warning in map containers
+        ['map-container', 'map-container-r'].forEach(function (id) {
           var el = document.getElementById(id);
           if (el) {
             el.innerHTML =
               '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:20px;margin:10px;text-align:center;">' +
               '<div style="font-size:2rem;">🗺️</div>' +
               '<strong>Google Maps API Key Required</strong><br/><br/>' +
-              'To enable the map:<br/>' +
-              '1. Get a free key at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br/>' +
-              '2. Enable <strong>Maps JavaScript API</strong><br/>' +
-              '3. Open <code>frontend/dashboard.html</code><br/>' +
-              '4. Replace <code>YOUR_GOOGLE_MAPS_API_KEY</code> with your key' +
+              'Add <code>GOOGLE_MAPS_API_KEY</code> to your <code>backend/.env</code> file.' +
               '</div>';
           }
         });
+        return;
       }
-    });
-  </script>
-  <!-- FIX: Added `callback=onGoogleMapsReady` so we know exactly when Maps is ready.
-       Replace YOUR_GOOGLE_MAPS_API_KEY with your actual Google Maps API key. -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=onGoogleMapsReady" async></script>
+      // Inject Maps script dynamically with the real key
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=onGoogleMapsReady`;
+      script.async = true;
+      document.head.appendChild(script);
+    })
+    .catch(() => console.error('Could not load Maps API key from backend.'));
+</script>
+
 </head>
 <body>
 

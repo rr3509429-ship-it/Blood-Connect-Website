@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — Smart Blood Donation</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">🩸 BloodConnect Admin</a>
+  <div class="nav-links">
+    <span style="color:#666;font-size:.9rem;" id="admin-name"></span>
+    <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" style="background:#333;">👑</div>
+      <div class="sidebar-name">Admin Panel</div>
+      <div class="sidebar-role">System Administrator</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="active" onclick="showAdminSection('analytics')"><span class="nav-icon">📊</span> Analytics</a>
+      <a href="#" onclick="showAdminSection('users')"><span class="nav-icon">👥</span> Donors Data</a>
+      <a href="#" onclick="showAdminSection('receivers')"><span class="nav-icon">🏥</span> Receivers Data</a>
+      <a href="#" onclick="showAdminSection('requests')"><span class="nav-icon">📋</span> Blood Requests</a>
+      <a href="#" onclick="showAdminSection('history')"><span class="nav-icon">🩸</span> Donation History</a>
+      <a href="#" onclick="showAdminSection('export')"><span class="nav-icon">📥</span> Export Data</a>
+      <a href="dashboard.html"><span class="nav-icon">↩️</span> Back to App</a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- Analytics -->
+    <div id="admin-analytics" class="admin-section">
+      <h2 class="page-title">📊 System Analytics</h2>
+      <p class="page-subtitle">Real-time statistics for the blood donation system</p>
+      <div class="stats-grid" id="admin-stats"><div class="loading"><div class="spinner"></div></div></div>
+      <div class="charts-grid" style="margin-top:24px;">
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">Blood Group Demand</h3>
+          <div class="chart-container"><canvas id="bloodGroupChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">Monthly Requests</h3>
+          <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">Request Status Distribution</h3>
+          <div class="chart-container"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">User Role Distribution</h3>
+          <div class="chart-container"><canvas id="roleChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div id="admin-users" class="admin-section" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px;">👥 Donors Data</h2>
+          <p class="page-subtitle" style="margin:0;">All registered donors in the system</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="deleteCompletedUsers()" class="btn btn-danger" style="background:#c62828;">🗑️ Delete Completed Users</button>
+          <a href="#" onclick="exportCSV('users')" class="btn btn-secondary">📥 Download CSV</a>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="users-table"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Receivers -->
+    <div id="admin-receivers" class="admin-section" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px;">🏥 Receivers Data</h2>
+          <p class="page-subtitle" style="margin:0;">All registered receivers / patients</p>
+        </div>
+        <a href="#" onclick="exportCSV('users')" class="btn btn-secondary">📥 Download CSV</a>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="receivers-table"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Requests -->
+    <div id="admin-requests" class="admin-section" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px;">📋 Blood Requests</h2>
+          <p class="page-subtitle" style="margin:0;">View and manage all blood requests</p>
+        </div>
+        <a href="#" onclick="exportCSV('requests')" class="btn btn-secondary">📥 Download CSV</a>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="requests-table"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Donation History -->
+    <div id="admin-history" class="admin-section" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 class="page-title" style="margin-bottom:4px;">🩸 Donation History</h2>
+          <p class="page-subtitle" style="margin:0;">All completed donations in the system</p>
+        </div>
+        <button onclick="downloadPDFReport()" class="btn btn-primary" style="background:#d32f2f;border-color:#d32f2f;">📄 Download Report as PDF</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="history-table"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div id="admin-export" class="admin-section" style="display:none;">
+      <h2 class="page-title">📥 Export System Data</h2>
+      <p class="page-subtitle">Download data as CSV or full PDF report</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:8px;">
+        <div class="card" style="text-align:center;padding:36px 24px;">
+          <div style="font-size:3rem;margin-bottom:12px;">📄</div>
+          <h3>Full PDF Report</h3>
+          <p style="color:#666;font-size:.9rem;margin:10px 0 20px;">Professional PDF with all donors, receivers, requests, and donation history tables.</p>
+          <button onclick="downloadPDFReport()" class="btn btn-primary btn-block" style="background:#d32f2f;border-color:#d32f2f;">📄 Download Report as PDF</button>
+        </div>
+        <div class="card" style="text-align:center;padding:36px 24px;">
+          <div style="font-size:3rem;margin-bottom:12px;">👥</div>
+          <h3>Users Data</h3>
+          <p style="color:#666;font-size:.9rem;margin:10px 0 20px;">Export all registered users with their details, roles, blood groups, and verification status.</p>
+          <a onclick="exportCSV('users')" href="#" class="btn btn-primary btn-block">📥 Download Users CSV</a>
+        </div>
+        <div class="card" style="text-align:center;padding:36px 24px;">
+          <div style="font-size:3rem;margin-bottom:12px;">📋</div>
+          <h3>Requests Data</h3>
+          <p style="color:#666;font-size:.9rem;margin:10px 0 20px;">Export all blood requests with status, blood groups, cities, and requester information.</p>
+          <a onclick="exportCSV('requests')" href="#" class="btn btn-primary btn-block">📥 Download Requests CSV</a>
+        </div>
+        <div class="card" style="text-align:center;padding:36px 24px;border:2px solid #d32f2f;">
+          <div style="font-size:3rem;margin-bottom:12px;">🗑️</div>
+          <h3>Delete Completed Users</h3>
+          <p style="color:#666;font-size:.9rem;margin:10px 0 20px;">Remove users who have already donated or received blood. This action cannot be undone.</p>
+          <button onclick="deleteCompletedUsers()" class="btn btn-danger btn-block" style="background:#c62828;border-color:#c62828;">🗑️ Delete Completed Users</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+(function() {
+  // Auth check
+  const session = requireAuth('admin-login.html');
+  if (!session) return;
+  const user = session.user;
+  // Support both role string and roles array
+  const isAdmin = user.role === 'admin' || (Array.isArray(user.roles) && user.roles.includes('admin'));
+  if (!isAdmin) {
+    showToast('Admin access required', 'error');
+    setTimeout(() => window.location.href = 'dashboard.html', 1500);
+    return;
+  }
+  document.getElementById('admin-name').textContent = `Admin: ${user.name}`;
+
+  window.showAdminSection = function(name) {
+    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+    document.getElementById(`admin-${name}`).style.display = 'block';
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+    if (event && event.target) event.target.classList.add('active');
+    const loaders = {
+      analytics: loadAnalytics,
+      users:     loadUsers,
+      receivers: loadReceivers,
+      requests:  loadRequests,
+      history:   loadHistory
+    };
+    if (loaders[name]) loaders[name]();
+  };
+
+  // Load analytics on start
+  loadAnalytics();
+
+  async function loadAnalytics() {
+    try {
+      const d = await Admin.getAnalytics();
+      document.getElementById('admin-stats').innerHTML = `
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${d.totalUsers}</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-card green"><div class="stat-icon">🩸</div><div class="stat-value">${d.totalDonors}</div><div class="stat-label">Donors</div></div>
+        <div class="stat-card blue"><div class="stat-icon">📋</div><div class="stat-value">${d.totalRequests}</div><div class="stat-label">Total Requests</div></div>
+        <div class="stat-card orange"><div class="stat-icon">✅</div><div class="stat-value">${d.successRate}%</div><div class="stat-label">Success Rate</div></div>
+        <div class="stat-card"><div class="stat-icon">🚨</div><div class="stat-value">${d.emergencyRequests}</div><div class="stat-label">Emergency Requests</div></div>
+        <div class="stat-card green"><div class="stat-icon">🧾</div><div class="stat-value">${d.totalDonations}</div><div class="stat-label">Donations Done</div></div>
+      `;
+
+      // Blood group chart
+      const bgLabels = d.bloodGroupDemand.map(x => x._id);
+      const bgData = d.bloodGroupDemand.map(x => x.count);
+      new Chart(document.getElementById('bloodGroupChart'), {
+        type: 'bar',
+        data: { labels: bgLabels, datasets: [{ label: 'Requests', data: bgData, backgroundColor: '#d32f2f', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      // Monthly chart
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const mLabels = d.monthlyRequests.map(x => `${months[x._id.month - 1]} ${x._id.year}`);
+      const mData = d.monthlyRequests.map(x => x.count);
+      new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: { labels: mLabels, datasets: [{ label: 'Requests', data: mData, borderColor: '#d32f2f', backgroundColor: 'rgba(211,47,47,0.1)', tension: 0.4, fill: true }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // Status chart
+      new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Completed', 'Pending', 'Accepted', 'Cancelled'],
+          datasets: [{ data: [d.completedRequests, d.pendingRequests, d.totalRequests - d.completedRequests - d.pendingRequests, 0],
+            backgroundColor: ['#2e7d32','#e65100','#1565c0','#c62828'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // Role chart
+      new Chart(document.getElementById('roleChart'), {
+        type: 'pie',
+        data: {
+          labels: ['Donors', 'Receivers', 'Hospitals'],
+          datasets: [{ data: [d.totalDonors, d.totalReceivers, d.totalHospitals],
+            backgroundColor: ['#d32f2f','#1565c0','#2e7d32'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function loadUsers() {
+    const container = document.getElementById('users-table');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await Admin.getUsers();
+      container.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Blood</th><th>City</th><th>Verified</th><th>Donations</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${data.users.map(u => `
+                <tr>
+                  <td><strong>${u.name}</strong></td>
+                  <td>${u.email}</td>
+                  <td><span class="status-badge status-matched">${u.role}</span></td>
+                  <td><span class="blood-badge" style="font-size:.78rem;">${u.blood_group}</span></td>
+                  <td>${u.city}</td>
+                  <td>${u.isVerified ? '✅' : '❌'}</td>
+                  <td>${u.total_donations || 0}</td>
+                  <td><button class="btn btn-danger btn-sm" onclick="deleteUser('${u._id}')">🗑</button></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`; }
+  }
+
+  async function loadRequests() {
+    const container = document.getElementById('requests-table');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await Admin.getRequests();
+      container.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Blood</th><th>City</th><th>Requester</th><th>Emergency</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              ${data.requests.map(r => `
+                <tr>
+                  <td><span class="blood-badge" style="font-size:.78rem;">${r.blood_group}</span></td>
+                  <td>${r.city}</td>
+                  <td>${r.requester_id ? r.requester_id.name : '—'}</td>
+                  <td>${r.isEmergency ? '<span style="color:#d32f2f;font-weight:700;">🚨 YES</span>' : 'No'}</td>
+                  <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+                  <td>${formatDate(r.createdAt)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`; }
+  }
+
+  async function loadReceivers() {
+    const container = document.getElementById('receivers-table');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await Admin.getUsers();
+      // Filter only receivers
+      const receivers = data.users.filter(u =>
+        (Array.isArray(u.roles) && u.roles.includes('receiver')) || u.role === 'receiver' || u.role === 'both'
+      );
+      if (!receivers.length) {
+        container.innerHTML = '<div style="padding:32px;text-align:center;color:#888;">No receivers registered yet.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Blood Group</th><th>City</th><th>Phone</th><th>Verified</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${receivers.map(u => `
+                <tr>
+                  <td><strong>${u.name}</strong></td>
+                  <td>${u.email}</td>
+                  <td><span class="blood-badge" style="font-size:.78rem;">${u.blood_group}</span></td>
+                  <td>${u.city}</td>
+                  <td>${u.phone || '—'}</td>
+                  <td>${u.isVerified ? '✅' : '❌'}</td>
+                  <td><button class="btn btn-danger btn-sm" onclick="deleteUser('${u._id}', loadReceivers)">🗑</button></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`; }
+  }
+
+  async function loadHistory() {
+    const container = document.getElementById('history-table');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await Admin.getDonations();
+      if (!data.donations.length) {
+        container.innerHTML = '<div style="padding:32px;text-align:center;color:#888;">No donation history found.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Donor</th><th>Blood Group</th><th>Receiver</th><th>City</th><th>Hospital</th><th>Units</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+              ${data.donations.map(d => `
+                <tr>
+                  <td><strong>${d.donor_id ? d.donor_id.name : '—'}</strong></td>
+                  <td><span class="blood-badge" style="font-size:.78rem;">${d.blood_group || '—'}</span></td>
+                  <td>${d.receiver_id ? d.receiver_id.name : 'Walk-in'}</td>
+                  <td>${d.city || '—'}</td>
+                  <td>${d.hospital || '—'}</td>
+                  <td>${d.units || 1}</td>
+                  <td><span class="status-badge status-${d.status}">${d.status}</span></td>
+                  <td>${formatDate(d.date || d.createdAt)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    } catch(e) { container.innerHTML = `<div class="alert alert-danger">${e.message}</div>`; }
+  }
+
+  window.deleteCompletedUsers = async function() {
+    if (!confirm('⚠️ This will permanently delete all users who have already donated or received blood.\n\nAre you sure? This cannot be undone.')) return;
+    try {
+      const result = await Admin.deleteCompleted();
+      showToast(`✅ ${result.message}`, 'success');
+      // Refresh current visible section
+      loadUsers();
+    } catch(e) { showToast('❌ ' + e.message, 'error'); }
+  };
+
+  window.downloadPDFReport = function() {
+    const token = localStorage.getItem('bds_token');
+    const url   = `${Admin.reportPdfUrl()}?token=${encodeURIComponent(token)}`;
+    showToast('📄 Generating PDF report…', 'info');
+    const a = document.createElement('a');
+    a.href     = url;
+    a.download = 'BloodConnect-AdminReport.pdf';
+    a.target   = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  window.loadReceivers = loadReceivers;
+  window.loadHistory   = loadHistory;
+
+  window.deleteUser = async function(id, cb) {
+    if (!confirm('Delete this user permanently?')) return;
+    try {
+      await Admin.deleteUser(id);
+      showToast('User deleted', 'success');
+      if (typeof cb === 'function') cb(); else loadUsers();
+    } catch(e) { showToast(e.message, 'error'); }
+  };
+
+  window.exportCSV = function(type) {
+    const token = localStorage.getItem('bds_token');
+    const url = type === 'users' ? Admin.exportUsers() : Admin.exportRequests();
+    // Create a hidden link to download with auth token via query param workaround
+    // Since CSV is a GET request we need to pass token — create temp link
+    const a = document.createElement('a');
+    a.href = url + '?token=' + token;
+    a.download = `${type}.csv`;
+    a.click();
+    showToast(`Downloading ${type} CSV...`, 'info');
+  };
+
+  window.logout = function() { clearSession(); window.location.href = 'index.html'; };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — BloodConnect</title>
+  <link rel="stylesheet" href="css/style.css"/>
+
+  <!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  GOOGLE MAPS API KEY — SETUP REQUIRED                       ║
+  ║  1. Go to: https://console.cloud.google.com/                ║
+  ║  2. Create project → Enable "Maps JavaScript API"           ║
+  ║  3. Go to Credentials → Create API Key                      ║
+  ║  4. Replace YOUR_GOOGLE_MAPS_API_KEY in the line below      ║
+  ║  ⚠️  Without a real key the map section stays blank          ║
+  ╚══════════════════════════════════════════════════════════════╝
+
+  FIX APPLIED: Removed `defer` attribute — it caused initGoogleMap() to be
+  called before the Maps library finished loading. The script now loads
+  synchronously (or use `loading=async` with callback below).
+  -->
+ <script>
+  window._mapsApiReady = false;
+  window._mapsReadyCallbacks = [];
+
+  window.onGoogleMapsReady = function () {
+    window._mapsApiReady = true;
+    window._mapsReadyCallbacks.forEach(fn => fn());
+    window._mapsReadyCallbacks = [];
+  };
+
+  window.whenMapsReady = function (fn) {
+    if (window._mapsApiReady) fn();
+    else window._mapsReadyCallbacks.push(fn);
+  };
+
+ 
+  fetch('/api/config/maps-key')
+    .then(r => r.json())
+    .then(({ key }) => {
+      console.log('Maps key received:', key);
+      if (!key || key === 'YOUR_GOOGLE_MAPS_API_KEY') {
+        // Show warning in map containers
+        ['map-container', 'map-container-r'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) {
+            el.innerHTML =
+              '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:20px;margin:10px;text-align:center;">' +
+              '<div style="font-size:2rem;">🗺️</div>' +
+              '<strong>Google Maps API Key Required</strong><br/><br/>' +
+              'Add <code>GOOGLE_MAPS_API_KEY</code> to your <code>backend/.env</code> file.' +
+              '</div>';
+          }
+        });
+        return;
+      }
+      // Inject Maps script dynamically with the real key
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=onGoogleMapsReady`;
+      script.async = true;
+      document.head.appendChild(script);
+    })
+    .catch(() => console.error('Could not load Maps API key from backend.'));
+</script>
+
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div style="display:flex;align-items:center;gap:.5rem;">
+    <button id="sidebar-toggle" style="display:none;" aria-label="Toggle sidebar">☰</button>
+    <a href="index.html" class="nav-brand">🩸 BloodConnect</a>
+  </div>
+  <div class="nav-links" id="navLinks">
+    <span id="nav-user-name" style="color:var(--grey-500);font-size:.88rem;"></span>
+    <div id="nav-role-tags" class="roles-tags"></div>
+    <a href="dashboard.html">Dashboard</a>
+    <button onclick="logout()" class="btn btn-secondary btn-sm">Logout</button>
+  </div>
+  <button class="nav-hamburger" id="hamburger">☰</button>
+</nav>
+
+<!-- Notification bar -->
+<div class="notification-bar hidden" id="notif-bar">
+  <span id="notif-text">🔔 New blood request available nearby!</span>
+  <button onclick="document.getElementById('notif-bar').classList.add('hidden')">Dismiss</button>
+</div>
+
+<!-- Overlay for mobile sidebar -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- Dashboard Layout -->
+<div class="dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">?</div>
+      <div class="sidebar-name" id="sidebar-name">Loading...</div>
+      <div class="sidebar-role" id="sidebar-role"></div>
+      <div class="sidebar-badge" id="sidebar-blood"></div>
+    </div>
+
+    <!-- Role switcher for dual-role users -->
+    <div id="role-switcher-wrap" style="display:none;">
+      <div class="role-switcher">
+        <button class="role-switch-btn active" id="switch-donor-btn" onclick="switchDashboardView('donor')">🩸 Donor</button>
+        <button class="role-switch-btn" id="switch-receiver-btn" onclick="switchDashboardView('receiver')">🆘 Receiver</button>
+      </div>
+    </div>
+
+    <!-- Donor Nav -->
+    <nav class="sidebar-nav" id="nav-donor" style="display:none;">
+      <a href="#" class="active" onclick="showSection('donor-overview')"><span class="nav-icon">🏠</span> Overview</a>
+      <a href="#" onclick="showSection('donor-requests')"><span class="nav-icon">📋</span> Blood Requests</a>
+      <a href="#" onclick="showSection('donor-history')"><span class="nav-icon">📅</span> Donation History</a>
+      <a href="#" onclick="showSection('donor-map')"><span class="nav-icon">📍</span> Nearby Map</a>
+      <a href="#" onclick="showSection('donor-eligibility')"><span class="nav-icon">✅</span> Eligibility Check</a>
+      <a href="#" onclick="showSection('profile')"><span class="nav-icon">👤</span> My Profile</a>
+    </nav>
+
+    <!-- Receiver Nav -->
+    <nav class="sidebar-nav" id="nav-receiver" style="display:none;">
+      <a href="#" class="active" onclick="showSection('receiver-overview')"><span class="nav-icon">🏠</span> Overview</a>
+      <a href="#" onclick="showSection('receiver-request')"><span class="nav-icon">🆘</span> Request Blood</a>
+      <a href="#" onclick="showSection('receiver-my-requests')"><span class="nav-icon">📋</span> My Requests</a>
+      <a href="#" onclick="showSection('receiver-map')"><span class="nav-icon">📍</span> Find Donors</a>
+      <a href="#" onclick="showSection('profile')"><span class="nav-icon">👤</span> My Profile</a>
+    </nav>
+
+    <!-- Admin Nav -->
+    <nav class="sidebar-nav" id="nav-admin" style="display:none;">
+      <a href="admin.html"><span class="nav-icon">🛡️</span> Admin Panel</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-content">
+
+    <!-- ═══════════════ DONOR OVERVIEW ═══════════════ -->
+    <div id="donor-overview" class="section-content">
+      <div class="page-title">🏠 Donor Dashboard</div>
+      <div id="donor-stats" class="stats-cards">
+        <div class="stat-card"><div class="stat-card-icon red">🩸</div><div><div class="stat-card-value" id="d-total-donations">—</div><div class="stat-card-label">Total Donations</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon orange">📋</div><div><div class="stat-card-value" id="d-pending-requests">—</div><div class="stat-card-label">Pending Requests</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon green">✅</div><div><div class="stat-card-value" id="d-response-rate">—</div><div class="stat-card-label">Response Rate</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon blue">📅</div><div><div class="stat-card-value" id="d-last-donation">—</div><div class="stat-card-label">Last Donation</div></div></div>
+      </div>
+
+      <!-- Availability toggle -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">💡 Availability Status</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div id="avail-status-text" style="font-size:1rem;font-weight:600;color:var(--green);">✅ Available for Donation</div>
+            <div class="text-muted mt-1">Toggle your availability. Matched requests only go to available donors.</div>
+          </div>
+          <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;">
+            <span style="font-size:.9rem;color:var(--grey-500);">Unavailable</span>
+            <div id="avail-toggle-wrap" style="position:relative;width:52px;height:28px;">
+              <input type="checkbox" id="avail-toggle" style="opacity:0;width:0;height:0;position:absolute;" checked onchange="toggleAvailability(this.checked)"/>
+              <span id="avail-slider" style="position:absolute;inset:0;background:var(--green);border-radius:28px;transition:.3s;cursor:pointer;">
+                <span style="position:absolute;height:20px;width:20px;left:4px;bottom:4px;background:#fff;border-radius:50%;transition:.3s;"></span>
+              </span>
+            </div>
+            <span style="font-size:.9rem;color:var(--green);">Available</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Recent requests for donor -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Matched Requests <span id="d-req-count" style="background:var(--red);color:#fff;border-radius:20px;padding:.1rem .5rem;font-size:.75rem;margin-left:.4rem;">0</span></div>
+          <button class="btn btn-secondary btn-sm" onclick="loadDonorRequests()">🔄 Refresh</button>
+        </div>
+        <div id="donor-requests-preview"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ DONOR REQUESTS ═══════════════ -->
+    <div id="donor-requests" class="section-content">
+      <div class="page-title">📋 Blood Requests Matched to You</div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+        <button class="btn btn-secondary btn-sm" onclick="loadDonorRequests()">🔄 Refresh</button>
+        <select id="req-filter-blood" class="form-control" style="width:auto;" onchange="loadDonorRequests()">
+          <option value="">All Blood Groups</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+        </select>
+      </div>
+      <div id="donor-requests-list"></div>
+    </div>
+
+    <!-- ═══════════════ DONOR HISTORY ═══════════════ -->
+    <div id="donor-history" class="section-content">
+      <div class="page-title">📅 Donation History</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Your Donations</div>
+          <button class="btn btn-secondary btn-sm" onclick="loadDonationHistory()">🔄 Refresh</button>
+        </div>
+        <div id="donation-history-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ DONOR MAP ═══════════════ -->
+    <div id="donor-map" class="section-content">
+      <div class="page-title">📍 Nearby Blood Requests</div>
+      <div class="card">
+        <div class="map-controls">
+          <button id="share-location-btn" class="btn btn-primary" onclick="shareLocation()">📍 Share My Location</button>
+          <span id="location-status" class="text-muted"></span>
+        </div>
+        <div id="map-container">
+          <div class="map-placeholder">
+            <div class="map-icon">🗺️</div>
+            <div style="font-weight:600;">Click "Share My Location" to view the map</div>
+            <div class="text-muted" style="font-size:.85rem;">Shows nearby blood requests and donors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ DONOR ELIGIBILITY ═══════════════ -->
+    <div id="donor-eligibility" class="section-content">
+      <div class="page-title">✅ Eligibility Check</div>
+      <div id="eligibility-content"><div class="loading-center"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ═══════════════ RECEIVER OVERVIEW ═══════════════ -->
+    <div id="receiver-overview" class="section-content">
+      <div class="page-title">🏠 Receiver Dashboard</div>
+      <div class="stats-cards">
+        <div class="stat-card"><div class="stat-card-icon red">📋</div><div><div class="stat-card-value" id="r-total-requests">—</div><div class="stat-card-label">Total Requests</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon orange">⏳</div><div><div class="stat-card-value" id="r-pending">—</div><div class="stat-card-label">Pending</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon green">✅</div><div><div class="stat-card-value" id="r-completed">—</div><div class="stat-card-label">Completed</div></div></div>
+        <div class="stat-card"><div class="stat-card-icon blue">🚨</div><div><div class="stat-card-value" id="r-emergency">—</div><div class="stat-card-label">Emergency</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Recent Requests</div>
+          <a href="#" onclick="showSection('receiver-request')" class="btn btn-primary btn-sm">+ New Request</a>
+        </div>
+        <div id="receiver-requests-preview"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ REQUEST BLOOD FORM ═══════════════ -->
+    <div id="receiver-request" class="section-content">
+      <div class="page-title">🆘 Request Blood</div>
+      <div class="card" style="max-width:560px;">
+        <div id="req-form-alert"></div>
+        <form id="blood-request-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Blood Group Needed <span class="req">*</span></label>
+              <select id="req-blood-group" class="form-control" required>
+                <option value="">Select...</option>
+                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Units Needed</label>
+              <input type="number" id="req-units" class="form-control" value="1" min="1" max="10"/>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>City <span class="req">*</span></label>
+              <input type="text" id="req-city" class="form-control" placeholder="Karachi" required/>
+            </div>
+            <div class="form-group">
+              <label>Hospital Name</label>
+              <input type="text" id="req-hospital" class="form-control" placeholder="City Hospital"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Additional Notes</label>
+            <textarea id="req-notes" class="form-control" rows="2" placeholder="Any additional information..."></textarea>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:.75rem;background:var(--orange-lt);padding:.85rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--orange);">
+            <input type="checkbox" id="req-emergency" style="width:18px;height:18px;cursor:pointer;"/>
+            <div>
+              <label for="req-emergency" style="cursor:pointer;font-weight:700;color:var(--orange);margin:0;">🚨 Emergency Mode</label>
+              <div style="font-size:.8rem;color:var(--orange);">Instantly notifies all matched donors via email</div>
+            </div>
+          </div>
+          <button type="submit" id="req-submit-btn" class="btn btn-primary btn-block btn-lg">🆘 Submit Request</button>
+        </form>
+        <div id="req-match-result" style="display:none;" class="mt-2"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ RECEIVER MY REQUESTS ═══════════════ -->
+    <div id="receiver-my-requests" class="section-content">
+      <div class="page-title">📋 My Blood Requests</div>
+      <div style="margin-bottom:1rem;"><button class="btn btn-secondary btn-sm" onclick="loadReceiverRequests()">🔄 Refresh</button></div>
+      <div id="receiver-requests-list"></div>
+    </div>
+
+    <!-- ═══════════════ RECEIVER MAP ═══════════════ -->
+    <div id="receiver-map" class="section-content">
+      <div class="page-title">📍 Find Nearby Donors</div>
+      <div class="card">
+        <div class="map-controls">
+          <button id="share-location-btn-r" class="btn btn-primary" onclick="shareLocation()">📍 Share My Location</button>
+          <select id="map-blood-filter" class="form-control" style="width:auto;">
+            <option value="">All Blood Groups</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+          <span id="location-status-r" class="text-muted"></span>
+        </div>
+        <div id="map-container-r">
+          <div class="map-placeholder">
+            <div class="map-icon">🗺️</div>
+            <div style="font-weight:600;">Click "Share My Location" to view nearby donors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PROFILE ═══════════════ -->
+    <div id="profile" class="section-content">
+      <div class="page-title">👤 My Profile</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;" id="profile-grid">
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-avatar-lg" id="prof-avatar-lg">?</div>
+            <div id="prof-name-lg" style="font-size:1.2rem;font-weight:700;"></div>
+            <div id="prof-roles-display" class="roles-tags" style="justify-content:center;margin-top:.5rem;"></div>
+          </div>
+          <div class="profile-body" id="profile-info-rows"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1rem;">✏️ Edit Profile</div>
+          <div id="profile-edit-alert"></div>
+          <form id="profile-form">
+            <div class="form-group"><label>Full Name</label><input type="text" id="prof-name" class="form-control"/></div>
+            <div class="form-group"><label>City</label><input type="text" id="prof-city" class="form-control"/></div>
+            <div class="form-group"><label>Phone</label><input type="tel" id="prof-phone" class="form-control"/></div>
+            <div class="form-grid">
+              <div class="form-group"><label>Age</label><input type="number" id="prof-age" class="form-control" min="1" max="120"/></div>
+              <div class="form-group"><label>Weight (kg)</label><input type="number" id="prof-weight" class="form-control" min="1" max="300"/></div>
+            </div>
+            <!-- Role upgrade section -->
+            <div class="form-group" style="background:var(--blue-lt);padding:1rem;border-radius:var(--radius-sm);">
+              <label style="color:var(--blue);">🔄 My Roles</label>
+              <div style="display:flex;gap:1rem;margin-top:.5rem;">
+                <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.9rem;">
+                  <input type="checkbox" id="role-donor-cb" value="donor"/> 🩸 Donor
+                </label>
+                <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-size:.9rem;">
+                  <input type="checkbox" id="role-receiver-cb" value="receiver"/> 🆘 Receiver
+                </label>
+              </div>
+              <div class="text-muted" style="font-size:.78rem;margin-top:.4rem;">Tick both to be a donor AND receiver</div>
+            </div>
+            <button type="submit" id="profile-save-btn" class="btn btn-primary btn-block">Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Chatbot -->
+<button id="chatbot-btn" aria-label="Chat with BloodBot">💬<div class="notif-dot"></div></button>
+<div id="chatbot-window" class="hidden">
+  <div class="chatbot-header">
+    <div class="chatbot-title"><span>🩸</span><div><div>BloodBot</div><div class="chatbot-status">● Online</div></div></div>
+    <button id="chatbot-close">✕</button>
+  </div>
+  <div class="chatbot-quick-replies">
+    <button class="quick-btn" onclick="sendQuickReply('Who can donate blood?')">Eligibility</button>
+    <button class="quick-btn" onclick="sendQuickReply('Blood type compatibility')">Blood Types</button>
+    <button class="quick-btn" onclick="sendQuickReply('How to request blood')">Request</button>
+    <button class="quick-btn" onclick="sendQuickReply('Emergency procedure')">Emergency</button>
+    <button class="quick-btn" onclick="sendQuickReply('PDF receipt download')">Receipts</button>
+  </div>
+  <div id="chatbot-messages"></div>
+  <div class="chatbot-input-row">
+    <input id="chat-input" placeholder="Ask about eligibility, blood types..."/>
+    <button id="chat-send">➤</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/map.js"></script>
+<script src="js/chatbot.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BloodConnect — Smart Blood Donation System</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <meta name="description" content="Connect blood donors with receivers instantly. AI-powered matching, GPS location, PDF receipts."/>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">🩸 BloodConnect</a>
+  <div class="nav-links" id="navLinks">
+    <a href="index.html" class="active">Home</a>
+    <a href="#about">About</a>
+    <a href="login.html">Login</a>
+    <a href="admin-login.html" class="btn btn-secondary btn-sm" style="background:#333;color:#fff;border-color:#333;">👑 Admin</a>
+    <a href="signup.html" class="btn btn-primary btn-sm">Sign Up Free</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger" aria-label="Menu">☰</button>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>🩸 Save Lives with<br/>Smart Blood Donation</h1>
+  <p>Connect donors with receivers instantly. AI-powered matching finds the right donor at the right time — even in emergencies.</p>
+  <div class="hero-btns">
+    <a href="signup.html" class="btn btn-white btn-lg">🩸 Become a Donor</a>
+    <a href="signup.html?roles=receiver" class="btn btn-outline-white btn-lg">🆘 Request Blood</a>
+    <a href="signup.html?roles=both" class="btn btn-outline-white btn-lg">🔄 Register as Both</a>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats-bar">
+  <div class="stats-grid">
+    <div class="stat-item"><div class="stat-num">10,000+</div><div class="stat-label">Registered Donors</div></div>
+    <div class="stat-item"><div class="stat-num">5,000+</div><div class="stat-label">Lives Saved</div></div>
+    <div class="stat-item"><div class="stat-num">200+</div><div class="stat-label">Partner Hospitals</div></div>
+    <div class="stat-item"><div class="stat-num">24/7</div><div class="stat-label">Emergency Support</div></div>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="features" id="about">
+  <div class="section-title">
+    <h2>Why Choose BloodConnect?</h2>
+    <p>Advanced features to make blood donation faster, smarter, and more reliable.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon">🔄</div><h3>Dual Role Accounts</h3><p>Register as donor, receiver, or both in one account. Switch roles seamlessly from your dashboard.</p></div>
+    <div class="feature-card"><div class="feature-icon">🤖</div><h3>Smart AI Matching</h3><p>Our algorithm matches donors by blood type, location, availability, and response rate.</p></div>
+    <div class="feature-card"><div class="feature-icon">📍</div><h3>Live GPS Map</h3><p>Find the nearest available donors on an interactive Google Map with real-time location data.</p></div>
+    <div class="feature-card"><div class="feature-icon">🚨</div><h3>Emergency Mode</h3><p>Instant alerts sent to all matched donors via email when emergency requests are submitted.</p></div>
+    <div class="feature-card"><div class="feature-icon">🧾</div><h3>PDF Receipts</h3><p>Professionally formatted PDF receipts auto-generated with unique transaction IDs for every donation.</p></div>
+    <div class="feature-card"><div class="feature-icon">💬</div><h3>BloodBot AI Chat</h3><p>24/7 chatbot answers questions about eligibility, blood types, and emergency procedures.</p></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Ready to Save Lives?</h2>
+  <p>Join thousands of donors and receivers making a difference every day.</p>
+  <div class="hero-btns">
+    <a href="signup.html" class="btn btn-white btn-lg">Get Started Free →</a>
+  </div>
+</section>
+
+<footer>
+  <p>© 2024 BloodConnect — Smart Blood Donation Management System &nbsp;|&nbsp; <a href="#">Privacy</a> &nbsp;|&nbsp; <a href="#">Contact</a></p>
+</footer>
+
+<!-- Chatbot -->
+<button id="chatbot-btn" aria-label="Chat with BloodBot">💬<div class="notif-dot"></div></button>
+<div id="chatbot-window" class="hidden">
+  <div class="chatbot-header">
+    <div class="chatbot-title"><span>🩸</span><div><div>BloodBot</div><div class="chatbot-status">● Online — Ask me anything</div></div></div>
+    <button id="chatbot-close" aria-label="Close">✕</button>
+  </div>
+  <div class="chatbot-quick-replies">
+    <button class="quick-btn" onclick="sendQuickReply('Who can donate blood?')">Eligibility</button>
+    <button class="quick-btn" onclick="sendQuickReply('Blood type compatibility')">Blood Types</button>
+    <button class="quick-btn" onclick="sendQuickReply('How to donate blood?')">How to Donate</button>
+    <button class="quick-btn" onclick="sendQuickReply('Emergency procedure')">Emergency</button>
+  </div>
+  <div id="chatbot-messages"></div>
+  <div class="chatbot-input-row">
+    <input id="chat-input" placeholder="Ask about eligibility, blood types..." maxlength="300"/>
+    <button id="chat-send">➤</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/chatbot.js"></script>
+<script>
+  // Navbar hamburger
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  // If logged in redirect to dashboard
+  if (getSession()) {
+    const loginLink = document.querySelector('a[href="login.html"]');
+    const signupLink = document.querySelector('a[href="signup.html"]');
+    if (loginLink) loginLink.href = 'dashboard.html', loginLink.textContent = 'Dashboard';
+    if (signupLink) signupLink.href = 'dashboard.html', signupLink.textContent = 'My Dashboard';
+  }
+</script>
+</body>
+</html>
